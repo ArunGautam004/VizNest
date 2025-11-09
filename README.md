@@ -1,12 +1,12 @@
 # GitHub Collaboration Guide for VizNest
 
-Repository: `https://github.com/Arun0041/VizNest.git`
+Repository: `https://github.com/ArunGautam004/VizNest.git`
 
 ## Initial Setup (First Time Only)
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/Arun0041/VizNest.git
+git clone https://github.com/ArunGautam004/VizNest.git
 cd VizNest
 ```
 
@@ -127,7 +127,7 @@ git merge main
 
 ### Via Command Line (After Pushing)
 1. Push your branch: `git push origin feature/your-feature-name`
-2. Visit: `https://github.com/Arun0041/VizNest`
+2. Visit: `https://github.com/ArunGautam004/VizNest.git`
 3. Click "Compare & pull request"
 4. Add description and create PR
 
