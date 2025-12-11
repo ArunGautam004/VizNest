@@ -2,34 +2,29 @@ import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
+import Navbar from './cards/navbar'
+import Hero from './cards/hero'
+
+
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    // changed background to white for a cleaner look
+    <div className="bg-white min-h-screen"> 
+      <Navbar />
+      
+      {/* 2. Place the Hero component here */}
+      {/* We don't need padding-top (pt-32) anymore because the Hero image goes behind the navbar */}
+      <main>
+        <Hero />
+        
+        {/* Placeholder for future sections */}
+        <div className="py-16 text-center text-stone-500">
+          (Next sections will go here...)
+        </div>
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
