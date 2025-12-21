@@ -1,45 +1,27 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle, ArrowRight } from 'lucide-react';
-import { useCart } from '../context/CartContext';
-import confetti from 'canvas-confetti'; // This will work now!
+import { CheckCircle } from 'lucide-react';
 
 const OrderSuccess = () => {
-  // In a real app, you might want to clear the cart here
-  // const { clearCart } = useCart(); 
-  
-  useEffect(() => {
-    // Fire the confetti!
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 }, // Start slightly lower than the middle
-      colors: ['#4f46e5', '#818cf8', '#c7d2fe'] // VizNest Brand Colors (Indigos)
-    });
-  }, []);
-
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white p-12 rounded-3xl shadow-lg max-w-lg w-full text-center animate-fade-in-up">
-        
-        {/* Success Icon */}
-        <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-          <CheckCircle size={40} />
-        </div>
-        
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-4">Order Confirmed!</h1>
-        <p className="text-gray-600 mb-8 leading-relaxed">
-          Thank you for your purchase. We are preparing your custom pieces with care. You will receive an email confirmation shortly.
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
+      <div className="bg-white rounded-2xl shadow-2xl p-12 text-center max-w-lg">
+        <CheckCircle className="w-24 h-24 text-green-500 mx-auto mb-6" />
+        <h1 className="text-4xl font-bold mb-4">Order Placed Successfully!</h1>
+        <p className="text-xl text-gray-600 mb-8">
+          Thank you for shopping with VizNest. Your order is being prepared with care.
         </p>
-
-        {/* Fake Order ID */}
-        <div className="bg-gray-50 p-4 rounded-xl mb-8 text-sm text-gray-500 border border-gray-100">
-          Order ID: <span className="font-mono font-bold text-gray-900">#VN-{Math.floor(1000 + Math.random() * 9000)}</span>
+        <div className="space-y-4">
+          <Link
+            to="/shop"
+            className="block w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 transition"
+          >
+            Continue Shopping
+          </Link>
+          <Link to="/" className="block text-indigo-600 hover:underline">
+            Return Home
+          </Link>
         </div>
-
-        <Link to="/" className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform active:scale-95 duration-200">
-          Return Home <ArrowRight size={20}/>
-        </Link>
       </div>
     </div>
   );

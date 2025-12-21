@@ -4,8 +4,8 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('viznest_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    const saved = localStorage.getItem('viznest_user');
+    return saved ? JSON.parse(saved) : null;
   });
 
   useEffect(() => {
@@ -16,35 +16,32 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
-  // 1. LOGIN (Simulated)
-  const login = (email, password) => {
-    // In a real app, you would verify the password with a backend
-    setUser({
-      name: "Alex Designer", // Fallback for demo login
-      email: email,
-      phone: "+1 (987) 654-3210",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-      street: "123 Creative St",
-      city: "Design City",
-      state: "NY",
-      zipCode: "10001",
-      country: "USA",
+  const login = (email, name = "Guest User") => {
+    const newUser = {
+      name,
+      email,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff`,
       isAdmin: email.toLowerCase().includes('admin')
-    });
+    };
+    setUser(newUser);
   };
 
-  // 2. SIGNUP (New: Accepts full user details)
   const signup = (userData) => {
-    setUser({
+    const newUser = {
       ...userData,
-      avatar: `https://ui-avatars.com/api/?name=${userData.name}&background=6366f1&color=fff`, // Auto-generate avatar
-      isAdmin: userData.email.toLowerCase().includes('admin') // Security check
-    });
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=6366f1&color=fff`,
+      isAdmin: false
+    };
+    setUser(newUser);
   };
 
-  const logout = () => setUser(null);
-  
-  const updateProfile = (data) => setUser((prev) => ({ ...prev, ...data }));
+  const logout = () => {
+    setUser(null);
+  };
+
+  const updateProfile = (updates) => {
+    setUser(prev => ({ ...prev, ...updates }));
+  };
 
   return (
     <AuthContext.Provider value={{ user, login, signup, logout, updateProfile }}>
