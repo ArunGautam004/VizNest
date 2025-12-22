@@ -8,10 +8,12 @@ connectDB();
 
 const app = express();
 
-// FIX CORS - Allow frontend with credentials
+// ✅ FIX: Allow both ports (Vite uses 5173, Create React App uses 3000)
 app.use(cors({
-  origin: 'http://localhost:3000',  // Your React app URL
-  credentials: true                 // Important for cookies/sessions if used later
+  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
@@ -20,6 +22,11 @@ app.use(express.json());
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/orders', require('./routes/orders'));
+
+// Test route to verify server is working
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Server is working!' });
+});
 
 // Global error handler
 app.use((err, req, res, next) => {
