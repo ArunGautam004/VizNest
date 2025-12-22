@@ -1,75 +1,106 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
-import { useAuth } from './AuthContext';
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 const OrdersContext = createContext();
+const API_URL = "http://localhost:5000/api/orders";
 
 export const OrdersProvider = ({ children }) => {
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
+  const getToken = () => localStorage.getItem("token");
+
+  // ================= USER ORDERS =================
   const fetchOrders = async () => {
-    if (!user) return;
+    setLoading(true);
     try {
-      setError('');
-      const res = await axios.get('http://localhost:5000/api/orders');
-      setOrders(res.data);
+      const res = await fetch(API_URL, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      setOrders(data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch orders');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (user) fetchOrders();
-  }, [user]);
-
+  // ================= CREATE ORDER =================
   const addOrder = async (orderData) => {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(orderData)
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+
+    setOrders(prev => [data, ...prev]);
+  };
+
+  // ================= ADMIN =================
+  const fetchAllOrders = async () => {
+    setLoading(true);
     try {
-      setError('');
-      const res = await axios.post('http://localhost:5000/api/orders', orderData);
-      setOrders(prev => [...prev, res.data]);
-      return res.data;
+      const res = await fetch(`${API_URL}/all`, {
+        headers: {
+          Authorization: `Bearer ${getToken()}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      setOrders(data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create order');
-      throw err;
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateOrderStatus = async (id, newStatus) => {
-    try {
-      setError('');
-      const res = await axios.put(`http://localhost:5000/api/orders/${id}`, { status: newStatus });
-      setOrders(prev => prev.map(order => order._id === id ? res.data : order));
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update order');
-      throw err;
-    }
-  };
+  const updateOrderStatus = async (id, status) => {
+    const res = await fetch(`${API_URL}/${id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${getToken()}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ status })
+    });
 
-  const fetchAllOrders = async () => { // For admin
-    try {
-      setError('');
-      const res = await axios.get('http://localhost:5000/api/orders/all');
-      setOrders(res.data);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fetch all orders');
-    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message);
+
+    setOrders(prev =>
+      prev.map(o => (o._id === id ? data : o))
+    );
   };
 
   return (
-    <OrdersContext.Provider value={{ 
-      orders, 
-      loading, 
-      error, 
-      addOrder, 
-      updateOrderStatus, 
-      fetchOrders, 
-      fetchAllOrders 
-    }}>
+    <OrdersContext.Provider
+      value={{
+        orders,
+        loading,
+        error,
+        fetchOrders,
+        fetchAllOrders,
+        addOrder,
+        updateOrderStatus
+      }}
+    >
       {children}
     </OrdersContext.Provider>
   );

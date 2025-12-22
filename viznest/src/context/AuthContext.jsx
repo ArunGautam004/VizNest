@@ -1,100 +1,136 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+// src/context/AuthContext.jsx
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext();
+
+// API Base URL - adjust this to match your backend
+// Try with and without /api depending on your server.js routes
+const API_URL = 'http://localhost:5000/api';
+
+// Add this helper to debug
+const debugFetch = async (url, options) => {
+  console.log('🔵 Making request to:', url);
+  console.log('🔵 Request options:', options);
+  
+  try {
+    const response = await fetch(url, options);
+    console.log('✅ Response status:', response.status);
+    const data = await response.json();
+    console.log('✅ Response data:', data);
+    return { response, data };
+  } catch (error) {
+    console.error('❌ Fetch error:', error);
+    throw error;
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Load user from localStorage on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      // Fetch user profile to validate token
-      axios.get('http://localhost:5000/api/auth/profile') // Add this endpoint if needed, or use stored data
-        .then(res => setUser(res.data))
-        .catch(() => {
-          localStorage.removeItem('token');
-          delete axios.defaults.headers.common['Authorization'];
-        });
-      setUser({ 
-        name: localStorage.getItem('userName'), 
-        email: localStorage.getItem('userEmail'), 
-        isAdmin: localStorage.getItem('isAdmin') === 'true' 
-      });
+    const userData = localStorage.getItem('user');
+    
+    if (token && userData) {
+      setUser(JSON.parse(userData));
     }
     setLoading(false);
   }, []);
 
-  // Axios interceptor for 401
-  axios.interceptors.response.use(
-    response => response,
-    error => {
-      if (error.response?.status === 401) {
-        localStorage.removeItem('token');
-        setUser(null);
-        window.location.href = '/login';
-      }
-      return Promise.reject(error);
-    }
-  );
-
+  // Register function
   const register = async (name, email, password) => {
-      try {
-        setError('');
-        const res = await axios.post('http://localhost:5000/api/auth/register', { name, email, password });
-        const { token, isAdmin } = res.data;
-        localStorage.setItem('token', token);
-        localStorage.setItem('userName', name);
-        localStorage.setItem('userEmail', email);
-        localStorage.setItem('isAdmin', isAdmin);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        setUser({ name, email, isAdmin });
-        console.log('Registration successful:', res.data); // Debug
-      } catch (err) {
-        const errMsg = err.response?.data?.message || 'Server error during registration';
-        setError(errMsg);
-        console.error('Registration failed:', errMsg); // Debug
-        throw err;
-      }
-    };
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    const login = async (email, password) => {
-      try {
-        setError('');
-        const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
-        const { token, name, isAdmin } = res.data;
-        localStorage.setItem('token', token);
-        localStorage.setItem('userName', name);
-        localStorage.setItem('userEmail', email);
-        localStorage.setItem('isAdmin', isAdmin);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        setUser({ name: res.data.name, email, isAdmin });
-        console.log('Login successful:', res.data); // Debug
-      } catch (err) {
-        const errMsg = err.response?.data?.message || 'Server error during login';
-        setError(errMsg);
-        console.error('Login failed:', errMsg); // Debug
-        throw err;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed');
       }
-    };
+
+      // Save token and user data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data));
+      setUser(data);
+      setError('');
+      
+      return data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  // Login function
+  const login = async (email, password) => {
+    try {
+      console.log('🔵 Attempting login to:', `${API_URL}/auth/login`);
+      
+      const { response, data } = await debugFetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Save token and user data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data));
+      setUser(data);
+      setError('');
+      
+      return data;
+    } catch (err) {
+      console.error('❌ Login error:', err);
+      setError(err.message);
+      throw err;
+    }
+  };
+
+  // Logout function
   const logout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('isAdmin');
-    delete axios.defaults.headers.common['Authorization'];
+    localStorage.removeItem('user');
     setUser(null);
     setError('');
   };
 
-  return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading, error }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  // Get auth token
+  const getToken = () => {
+    return localStorage.getItem('token');
+  };
+
+  const value = {
+    user,
+    loading,
+    error,
+    register,
+    login,
+    logout,
+    getToken,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
