@@ -1,10 +1,11 @@
-// src/App.jsx (or wherever your main app component is)
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { ProductProvider } from './context/ProductContext';
 import { OrdersProvider } from './context/OrdersContext';
+import { WishlistProvider } from './context/WishlistContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 // Import your pages
 import Home from './pages/Home';
@@ -18,7 +19,7 @@ import Customizer from './pages/Customizer';
 import Admin from './pages/Admin';
 import About from './pages/About';
 import OrderSuccess from './pages/OrderSuccess';
-import WishlistPage from './pages/WishlistPage';
+import WishlistPage from './pages/WishlistPage'; // ✅ THIS WAS MISSING!
 
 // Import your components
 import Navbar from './components/Navbar';
@@ -28,32 +29,36 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <ProductProvider>
-          <CartProvider>
-            <OrdersProvider>
-              <div className="min-h-screen flex flex-col">
-                <Navbar />
-                <main className="flex-grow">
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/shop" element={<Shop />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/cart" element={<Cart />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/product/:id" element={<ProductDetails />} />
-                    <Route path="/customize/:id" element={<Customizer />} />
-                    <Route path="/admin" element={<Admin />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/order-success" element={<OrderSuccess />} />
-                    <Route path="/wishlist" element={<WishlistPage />} />
-                  </Routes>
-                </main>
-                <Footer />
-              </div>
-            </OrdersProvider>
-          </CartProvider>
-        </ProductProvider>
+        <NotificationProvider>
+          <ProductProvider>
+            <CartProvider>
+              <OrdersProvider>
+                <WishlistProvider>
+                  <div className="min-h-screen flex flex-col">
+                    <Navbar />
+                    <main className="flex-grow">
+                      <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/shop" element={<Shop />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/cart" element={<Cart />} />
+                        <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/product/:id" element={<ProductDetails />} />
+                        <Route path="/customize/:id" element={<Customizer />} />
+                        <Route path="/admin" element={<Admin />} />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/order-success" element={<OrderSuccess />} />
+                        <Route path="/wishlist" element={<WishlistPage />} />
+                      </Routes>
+                    </main>
+                    <Footer />
+                  </div>
+                </WishlistProvider>
+              </OrdersProvider>
+            </CartProvider>
+          </ProductProvider>
+        </NotificationProvider>
       </AuthProvider>
     </Router>
   );

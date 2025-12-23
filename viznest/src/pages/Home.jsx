@@ -1,11 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import EnhancedHero from '../components/EnhancedHero';
 import BlogPreview from '../components/BlogPreview';
-import { products } from '../data/products';
 
 const Home = () => {
+  const [trendingProducts, setTrendingProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/products');
+        
+        // Safety: Check if response is JSON
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+           throw new Error("Server didn't return JSON");
+        }
+
+        const data = await res.json();
+        
+        // ✅ CRITICAL FIX: Ensure 'data' is actually an Array before using .slice()
+        if (Array.isArray(data)) {
+            setTrendingProducts(data.slice(0, 4));
+        } else {
+            console.error("API Error: Expected array but got:", data);
+            setTrendingProducts([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+        setTrendingProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <EnhancedHero />
@@ -42,10 +75,17 @@ const Home = () => {
               View All →
             </Link>
           </div>
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {products.slice(0, 4).map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+            {loading ? (
+                <p className="text-gray-500 col-span-full text-center">Loading trending items...</p>
+            ) : trendingProducts.length > 0 ? (
+                trendingProducts.map(product => (
+                  <ProductCard key={product._id} product={product} />
+                ))
+            ) : (
+                <p className="text-gray-500 col-span-full text-center">No products found. (Check Database)</p>
+            )}
           </div>
         </div>
       </section>

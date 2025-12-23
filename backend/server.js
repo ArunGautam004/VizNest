@@ -1,3 +1,6 @@
+// 1. SSL FIX (Must be at the very top)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
@@ -8,29 +11,26 @@ connectDB();
 
 const app = express();
 
-// ✅ FIX: Allow both ports (Vite uses 5173, Create React App uses 3000)
+// 2. CORS (Allow Frontend)
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:5173'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  credentials: true
 }));
 
-app.use(express.json());
+// 3. INCREASE SIZE LIMITS (Crucial for Images)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Routes
+// 4. ROUTES
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/products', require('./routes/products'));
+app.use('/api/products', require('./routes/products')); 
 app.use('/api/orders', require('./routes/orders'));
+app.use('/api/cart', require('./routes/cart'));
+app.use('/api/wishlist', require('./routes/wishlist')); // ✅ ADDED THIS LINE
 
-// Test route to verify server is working
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'Server is working!' });
-});
-
-// Global error handler
+// Global Error Handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error("🔥 Server Error:", err.stack); // Log error to terminal
   res.status(500).json({ message: 'Server error', error: err.message });
 });
 
