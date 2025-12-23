@@ -109,14 +109,14 @@ const Navbar = () => {
                       </Link>
                       
                       {/* ✅ Redirects to Profile for Order History */}
-                      {/* <Link
+                      <Link
                         to="/profile"
                         onClick={() => setIsUserMenuOpen(false)}
                         className="flex items-center gap-3 px-5 py-3 text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
                       >
                         <ClipboardList size={18} />
                         My Orders
-                      </Link> */}
+                      </Link>
 
                       {/* ADMIN DASHBOARD - ONLY FOR ADMINS */}
                       {user.isAdmin && (
@@ -192,9 +192,9 @@ const Navbar = () => {
                     <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 rounded-xl text-gray-700 hover:bg-indigo-50 transition font-medium">
                     My Profile
                     </Link>
-                    {/* <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 rounded-xl text-gray-700 hover:bg-indigo-50 transition font-medium">
+                    <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 rounded-xl text-gray-700 hover:bg-indigo-50 transition font-medium">
                     My Orders
-                    </Link> */}
+                    </Link>
                     {user.isAdmin && (
                     <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 rounded-xl text-indigo-600 bg-indigo-50 font-bold">
                         Admin Dashboard

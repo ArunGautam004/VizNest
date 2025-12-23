@@ -20,7 +20,6 @@ import Admin from './pages/Admin';
 import About from './pages/About';
 import OrderSuccess from './pages/OrderSuccess';
 import WishlistPage from './pages/WishlistPage'; // ✅ THIS WAS MISSING!
-import BlogPost from './pages/BlogPost';
 
 // Import your components
 import Navbar from './components/Navbar';
@@ -51,7 +50,6 @@ function App() {
                         <Route path="/about" element={<About />} />
                         <Route path="/order-success" element={<OrderSuccess />} />
                         <Route path="/wishlist" element={<WishlistPage />} />
-                        <Route path="/blog/:id" element={<BlogPost />} />
                       </Routes>
                     </main>
                     <Footer />

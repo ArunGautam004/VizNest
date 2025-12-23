@@ -22,7 +22,6 @@ const Profile = () => {
   const [showAllAddresses, setShowAllAddresses] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   
-  // ✅ NEW: Track which address is being edited (null = adding new)
   const [editingAddressId, setEditingAddressId] = useState(null);
   
   // Forms
@@ -34,11 +33,18 @@ const Profile = () => {
   const fetchProfileData = async () => {
     try {
         const token = localStorage.getItem('token');
-        if(!token) return;
+        if(!token) {
+            setLoading(false);
+            return;
+        }
 
+        // Fetch User Details
         const userRes = await fetch('http://localhost:5000/api/auth/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
+        
+        if (!userRes.ok) throw new Error("Failed to fetch profile");
+        
         const userData = await userRes.json();
         setUserData(userData);
         setProfileForm({ 
@@ -48,23 +54,31 @@ const Profile = () => {
             avatar: null 
         });
 
+        // Fetch Orders
         const ordersRes = await fetch('http://localhost:5000/api/orders/myorders', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const ordersData = await ordersRes.json();
         
-        setAllOrders(ordersData);
-        setVisibleOrders(ordersData.slice(0, ORDERS_PER_PAGE));
+        if (ordersRes.ok) {
+            const ordersData = await ordersRes.json();
+            setAllOrders(ordersData);
+            setVisibleOrders(ordersData.slice(0, ORDERS_PER_PAGE));
+        }
 
-        setLoading(false);
     } catch (err) {
         console.error("Error fetching profile:", err);
+    } finally {
         setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user) fetchProfileData();
+    if (user) {
+        fetchProfileData();
+    } else {
+        // ✅ FIX: If no user, stop loading immediately so we don't spin forever
+        setLoading(false);
+    }
   }, [user]);
 
   // --- PAGINATION HANDLER ---
@@ -106,7 +120,6 @@ const Profile = () => {
       }
   };
 
-  // ✅ PREPARE EDIT
   const handleStartEditAddress = (addr) => {
       setAddressForm({
           street: addr.street,
@@ -119,20 +132,17 @@ const Profile = () => {
       });
       setEditingAddressId(addr._id);
       setShowAddressForm(true);
-      // Scroll to form
       setTimeout(() => {
           document.getElementById('address-form')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
   };
 
-  // ✅ CANCEL EDIT
   const handleCancelEditAddress = () => {
       setAddressForm({ street: '', city: '', state: '', zip: '', country: '', phone: '', isPrimary: false });
       setEditingAddressId(null);
       setShowAddressForm(false);
   };
 
-  // ✅ SUBMIT ADDRESS (ADD OR UPDATE)
   const handleSaveAddress = async (e) => {
       e.preventDefault();
       try {
@@ -140,7 +150,6 @@ const Profile = () => {
         let url = 'http://localhost:5000/api/auth/address';
         let method = 'POST';
 
-        // If editing, change URL and Method
         if (editingAddressId) {
             url = `http://localhost:5000/api/auth/address/${editingAddressId}`;
             method = 'PUT';
@@ -154,7 +163,7 @@ const Profile = () => {
 
         if(res.ok) {
             await fetchProfileData();
-            handleCancelEditAddress(); // Reset form
+            handleCancelEditAddress(); 
         }
       } catch(err) { console.error(err); }
   };
@@ -176,7 +185,7 @@ const Profile = () => {
   const visibleAddresses = showAllAddresses ? sortedAddresses : sortedAddresses.slice(0, 1);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-indigo-600 font-bold text-lg"><Loader className="animate-spin mr-2"/> Loading Profile...</div>;
-  if (!user || !userData) return <div className="min-h-screen flex items-center justify-center"><Link to="/login" className="text-indigo-600">Please Login</Link></div>;
+  if (!user || !userData) return <div className="min-h-screen flex items-center justify-center"><Link to="/login" className="text-indigo-600 font-bold underline">Please Login to View Profile</Link></div>;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -234,11 +243,9 @@ const Profile = () => {
                                         {addr.phone && <p className="text-xs text-gray-500 mt-2 flex items-center gap-1 font-medium bg-white px-2 py-1 rounded w-fit border"><Phone size={12}/> {addr.phone}</p>}
                                     </div>
                                     <div className="flex flex-col gap-2">
-                                        {/* ✅ EDIT BUTTON */}
                                         <button onClick={() => handleStartEditAddress(addr)} className="text-gray-400 hover:text-indigo-600 p-1 transition bg-gray-50 rounded hover:bg-indigo-50">
                                             <Edit2 size={16}/>
                                         </button>
-                                        {/* DELETE BUTTON */}
                                         <button onClick={() => handleDeleteAddress(addr._id)} className="text-gray-400 hover:text-red-500 p-1 transition bg-gray-50 rounded hover:bg-red-50">
                                             <Trash2 size={16}/>
                                         </button>
@@ -255,7 +262,6 @@ const Profile = () => {
                         )}
                     </div>
                     
-                    {/* Add/Edit Address Form */}
                     {showAddressForm && (
                         <form id="address-form" onSubmit={handleSaveAddress} className="mt-6 border-t pt-6 space-y-3 animate-in fade-in slide-in-from-top-2">
                             <h3 className="font-bold text-gray-800 text-sm mb-2">{editingAddressId ? 'Edit Address' : 'New Address'}</h3>
@@ -284,7 +290,7 @@ const Profile = () => {
                 </div>
             </div>
 
-            {/* --- RIGHT: ORDER HISTORY (Paginated) --- */}
+            {/* --- RIGHT: ORDER HISTORY --- */}
             <div className="lg:col-span-2 space-y-6">
                 <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold flex items-center gap-2 text-gray-900"><Package className="text-indigo-600"/> Order History</h2>
@@ -302,8 +308,6 @@ const Profile = () => {
                     <div className="space-y-6">
                         {visibleOrders.map((order) => (
                             <div key={order._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition duration-300">
-                                
-                                {/* Order Header */}
                                 <div className="bg-gray-50/80 p-5 border-b border-gray-100 flex flex-wrap justify-between items-center gap-4">
                                     <div className="flex gap-8 text-sm">
                                         <div>
@@ -316,18 +320,6 @@ const Profile = () => {
                                         <div>
                                             <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Total</p>
                                             <p className="font-bold text-gray-900">₹{order.totalPrice.toFixed(2)}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Ship To</p>
-                                            <div className="font-semibold text-gray-900 flex items-center gap-1 cursor-pointer group relative">
-                                                {user.name} <ChevronDown size={12} className="text-gray-400"/>
-                                                <div className="absolute top-full left-0 mt-1 hidden group-hover:block bg-gray-900 text-white text-xs p-3 rounded-lg shadow-xl z-20 w-48 leading-relaxed">
-                                                    <p className="font-bold mb-1">Shipping Address:</p>
-                                                    {order.shippingAddress?.address},<br/>
-                                                    {order.shippingAddress?.city}, {order.shippingAddress?.postalCode}<br/>
-                                                    {order.shippingAddress?.country}
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
                                     <div className="text-right">
@@ -344,33 +336,17 @@ const Profile = () => {
                                     </div>
                                 </div>
 
-                                {/* Order Items */}
                                 <div className="divide-y divide-gray-50">
                                     {order.orderItems.map((item, index) => (
                                         <div key={index} className="p-5 flex gap-5 items-center group">
-                                            {/* Product Image */}
                                             <Link to={`/product/${item.product}`} className="relative w-20 h-20 flex-shrink-0 bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
                                                 <img 
                                                     src={item.image} 
                                                     alt={item.name} 
                                                     className="w-full h-full object-cover group-hover:scale-110 transition duration-500" 
                                                 />
-                                                {/* Mask Overlay */}
-                                                {item.selectedColor && item.selectedColor !== 'transparent' && item.mask && (
-                                                    <div 
-                                                        className="absolute inset-0 mix-blend-multiply pointer-events-none"
-                                                        style={{
-                                                            backgroundColor: item.selectedColor,
-                                                            maskImage: `url(${item.mask})`,
-                                                            WebkitMaskImage: `url(${item.mask})`,
-                                                            maskSize: 'contain',
-                                                            WebkitMaskSize: 'contain'
-                                                        }}
-                                                    />
-                                                )}
                                             </Link>
 
-                                            {/* Details */}
                                             <div className="flex-1 min-w-0">
                                                 <Link to={`/product/${item.product}`} className="font-bold text-gray-900 hover:text-indigo-600 text-base truncate block mb-1">
                                                     {item.name}
@@ -381,17 +357,9 @@ const Profile = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Price */}
                                             <div className="text-right">
                                                 <p className="font-bold text-gray-900 text-base">₹{item.price.toFixed(2)}</p>
                                                 <p className="text-xs text-gray-500">Qty: {item.qty}</p>
-                                            </div>
-
-                                            {/* Action */}
-                                            <div className="pl-4">
-                                                <Link to={`/product/${item.product}`} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors flex items-center justify-center">
-                                                    <ExternalLink size={18}/>
-                                                </Link>
                                             </div>
                                         </div>
                                     ))}
@@ -399,7 +367,6 @@ const Profile = () => {
                             </div>
                         ))}
 
-                        {/* Load More Button */}
                         {visibleOrders.length < allOrders.length && (
                             <button 
                                 onClick={handleLoadMore} 

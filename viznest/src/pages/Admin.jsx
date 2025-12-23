@@ -2,10 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Trash2, Edit2, X, Package, DollarSign,
-  ShoppingCart, Clock, Search, ArrowLeft, Layers, Calendar, Minus
+  ShoppingCart, Clock, Search, Eye, ArrowLeft, Upload, Images, Minus, Layers, Calendar, Filter
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ComposedChart 
 } from 'recharts';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,7 +16,7 @@ const CATEGORIES = [
   "Art", "Kitchen", "Office", "Outdoor"
 ];
 
-// DEFAULT MATERIALS
+// ✅ 1. FIXED MATERIALS LIST
 const DEFAULT_MATERIALS = [
   { name: 'Standard', price: 0, description: 'Base factory finish' },
   { name: 'Matte', price: 0, description: 'Soft, non-reflective' },
@@ -58,6 +58,7 @@ const Admin = () => {
   const [maskPreview, setMaskPreview] = useState(null);
 
   // Filter States
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderFilter, setOrderFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -100,40 +101,19 @@ const Admin = () => {
 
   const fetchOrders = async () => {
     try {
-      // ✅ RESTORED TO YOUR ORIGINAL ROUTE (/api/orders/all)
       const res = await fetch(`${API_URL}/api/orders/all`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
-      
-      // Safety check to ensure data is an array
-      if (Array.isArray(data)) {
-          setOrders(data);
-      } else {
-          console.error("API did not return an array:", data);
-          setOrders([]);
-      }
+      setOrders(data);
     } catch (err) { console.error(err); }
   };
 
   const calculateStats = () => {
-    if (!orders || orders.length === 0) return;
-
-    // ✅ REVENUE LOGIC: Excludes 'Cancelled' & Converts String Prices to Numbers
-    const totalRevenue = orders.reduce((sum, o) => {
-        if (o.status === 'Cancelled') return sum; 
-        return sum + (Number(o.totalPrice) || 0); 
-    }, 0);
-
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalPrice || 0), 0);
     const pendingOrders = orders.filter(o => o.status === 'Processing').length;
-    
-    setStats({ 
-        totalRevenue, 
-        totalOrders: orders.length, 
-        totalProducts: products.length, 
-        pendingOrders 
-    });
+    setStats({ totalRevenue, totalOrders: orders.length, totalProducts: products.length, pendingOrders });
   };
 
   // --- GRAPH DATA LOGIC ---
@@ -141,14 +121,13 @@ const Admin = () => {
     if (!orders.length) return [];
 
     const now = new Date();
-    // ✅ GRAPH LOGIC: Filter out Cancelled orders
-    let filteredOrders = orders.filter(o => o.status !== 'Cancelled');
+    let filteredOrders = orders;
 
     if (dateRange !== 'all') {
         const days = parseInt(dateRange);
         const cutoff = new Date();
         cutoff.setDate(now.getDate() - days);
-        filteredOrders = filteredOrders.filter(o => new Date(o.createdAt) >= cutoff);
+        filteredOrders = orders.filter(o => new Date(o.createdAt) >= cutoff);
     }
 
     const grouped = {};
@@ -157,7 +136,7 @@ const Admin = () => {
         if (!grouped[date]) {
             grouped[date] = { date, revenue: 0, count: 0 };
         }
-        grouped[date].revenue += (Number(order.totalPrice) || 0);
+        grouped[date].revenue += order.totalPrice;
         grouped[date].count += 1;
     });
 
@@ -286,12 +265,17 @@ const Admin = () => {
     } catch (err) { showNotification('error', 'Failed to update status'); }
   };
 
-  // --- FILTER LOGIC ---
+  // --- FILTER LOGIC (Corrected) ---
   const filteredOrders = orders.filter(order => {
     const matchesFilter = orderFilter === 'All' || order.status === orderFilter;
     const matchesSearch = !searchTerm || order._id.toLowerCase().includes(searchTerm.toLowerCase()) || order.user?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const getStatusColor = (status) => {
+    const colors = { Delivered: 'bg-green-100 text-green-700', Shipped: 'bg-blue-100 text-blue-700', Processing: 'bg-amber-100 text-amber-700', Pending: 'bg-gray-100 text-gray-700', Cancelled: 'bg-red-100 text-red-700' };
+    return colors[status] || 'bg-gray-100 text-gray-700';
+  };
 
   if (localStorage.getItem('token') && !user) {
      return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-xl animate-pulse">Loading Dashboard...</div></div>;
@@ -355,7 +339,7 @@ const Admin = () => {
                                 <YAxis yAxisId="right" orientation="right" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
                                 <Tooltip 
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                                    formatter={(value, name) => [name === 'revenue' ? `₹${value.toFixed(2)}` : value, name === 'revenue' ? 'Earnings' : 'Orders']}
+                                    formatter={(value, name) => [name === 'revenue' ? `₹${value}` : value, name === 'revenue' ? 'Earnings' : 'Orders']}
                                 />
                                 <Legend />
                                 <Bar yAxisId="left" dataKey="revenue" name="Earnings" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={50} />
@@ -419,7 +403,7 @@ const Admin = () => {
           </div>
         )}
 
-        {/* ORDERS TAB */}
+        {/* ORDERS TAB - ITEM WISE VIEW */}
         {activeTab === 'orders' && (
            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
              <div className="p-6 flex gap-4 border-b bg-gray-50 items-center">
@@ -428,7 +412,9 @@ const Admin = () => {
                    <input type="text" placeholder="Search orders..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
                 
+                {/* ✅ UPDATED FILTER OPTIONS */}
                 <div className="">
+                    {/* <Filter className="absolute left-4 top-3.5 text-gray-400" size={18} /> */}
                     <select value={orderFilter} onChange={e => setOrderFilter(e.target.value)} className="pl-12 pr-8 py-3 border rounded-xl cursor-pointer bg-white font-medium appearance-none hover:border-gray-400 transition focus:ring-2 focus:ring-indigo-500 outline-none">
                        <option value="All">All Status</option>
                        <option value="Processing">Processing</option>
@@ -475,7 +461,7 @@ const Admin = () => {
                                 <div className="text-sm text-gray-500 flex items-center gap-1"><Layers size={14}/> {order.shippingAddress?.city}</div>
                             </td>
                             <td className="p-5 font-bold text-gray-900 text-lg">
-                                ₹{(Number(item.price) * item.qty).toFixed(2)}
+                                ₹{(item.price * item.qty).toFixed(2)}
                             </td>
                             <td className="p-5">
                                 {idx === 0 ? (
