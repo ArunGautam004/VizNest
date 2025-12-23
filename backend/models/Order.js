@@ -1,3 +1,4 @@
+// backend/models/Order.js
 const mongoose = require('mongoose');
 
 const orderSchema = mongoose.Schema({
@@ -7,34 +8,23 @@ const orderSchema = mongoose.Schema({
       name: { type: String, required: true },
       qty: { type: Number, required: true },
       image: { type: String, required: true },
-      mask: { type: String }, // Save mask for customized items
       price: { type: Number, required: true },
       product: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Product' },
       
-      // ✅ SAVE CUSTOMIZATION SNAPSHOT
-      selectedColor: { type: String },
-      selectedColorName: { type: String },
-      selectedMaterial: { type: String }
+      // ✅ CRITICAL: Ensure these 4 lines exist so Admin sees the choices
+      selectedColorName: { type: String }, 
+      selectedColorHex: { type: String },
+      selectedMaterial: { type: String },
+      customPrice: { type: Number }
     }
   ],
-  shippingAddress: {
-    address: { type: String, required: true },
-    city: { type: String, required: true },
-    postalCode: { type: String, required: true },
-    country: { type: String, required: true },
-    phone: { type: String, required: true } // ✅ Added Phone
+  // ... rest of your schema (shippingAddress, paymentMethod, status, etc.)
+  status: { 
+    type: String, 
+    required: true, 
+    default: 'Processing',
+    enum: ['Processing', 'Shipped', 'Delivered', 'Cancelled'] 
   },
-  paymentMethod: { type: String, required: true, default: 'Card' },
-  paymentResult: { // For Stripe/Razorpay later
-    id: { type: String },
-    status: { type: String },
-    update_time: { type: String },
-    email_address: { type: String },
-  },
-  totalPrice: { type: Number, required: true, default: 0.0 },
-  isPaid: { type: Boolean, required: true, default: false },
-  paidAt: { type: Date },
-  status: { type: String, required: true, default: 'Processing' }, // ✅ Status from Backend
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

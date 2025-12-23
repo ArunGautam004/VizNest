@@ -14,6 +14,12 @@ const materialSchema = mongoose.Schema({
   description: { type: String }
 });
 
+// NEW: Color Schema
+const colorSchema = mongoose.Schema({
+  name: { type: String, required: true },
+  hex: { type: String, required: true }
+});
+
 const productSchema = mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
   name: { type: String, required: true },
@@ -33,6 +39,8 @@ const productSchema = mongoose.Schema({
   customizable: { type: Boolean, default: false },
   details: [{ label: String, value: String }],
   materials: [materialSchema], 
+  // NEW: Colors array per product
+  colors: [colorSchema]
 
 }, { timestamps: true });
 
