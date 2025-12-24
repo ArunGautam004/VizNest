@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, Phone, CreditCard, Check, AlertCircle, Package } from 'lucide-react';
+import { MapPin, CreditCard, Check, AlertCircle, Package } from 'lucide-react';
 
 const Checkout = () => {
   const { cart, cartTotal, clearCart } = useCart();
@@ -15,7 +15,6 @@ const Checkout = () => {
   const [selectedAddressId, setSelectedAddressId] = useState('new');
   const [saveNewAddress, setSaveNewAddress] = useState(false);
 
-  // ✅ FIX 1: Added 'state' to formData state
   const [formData, setFormData] = useState({
     address: '',
     city: '',
@@ -54,7 +53,7 @@ const Checkout = () => {
     setFormData({
       address: addr.street,
       city: addr.city,
-      state: addr.state || '', // ✅ FIX: Populate state
+      state: addr.state || '',
       postalCode: addr.zip,
       country: addr.country,
       phone: addr.phone || user.phone || '' 
@@ -64,7 +63,6 @@ const Checkout = () => {
   const handleAddressSelection = (id) => {
     setSelectedAddressId(id);
     if (id === 'new') {
-      // ✅ FIX: Reset state on new address
       setFormData({ address: '', city: '', state: '', postalCode: '', country: '', phone: user.phone || '' });
     } else {
       const addr = savedAddresses.find(a => a._id === id);
@@ -72,7 +70,18 @@ const Checkout = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
+  // ✅ 1. RAZORPAY LOADER
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+ const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) {
       setError('Please log in to checkout');
@@ -84,7 +93,7 @@ const Checkout = () => {
     try {
       const token = localStorage.getItem('token');
 
-      // ✅ FIX 2: Strict Error Checking for Address Save
+      // 1. Save Address if needed (Same as before)
       if (selectedAddressId === 'new' && saveNewAddress) {
         const addressResponse = await fetch('http://localhost:5000/api/auth/address', {
           method: 'POST',
@@ -95,7 +104,7 @@ const Checkout = () => {
           body: JSON.stringify({
             street: formData.address,
             city: formData.city,
-            state: formData.state, // ✅ Pass state to backend
+            state: formData.state,
             zip: formData.postalCode,
             country: formData.country,
             phone: formData.phone,
@@ -103,51 +112,93 @@ const Checkout = () => {
           })
         });
 
-        // If server rejects address, stop here and show error
-        if (!addressResponse.ok) {
-  const text = await addressResponse.text(); // 👈 read raw HTML/text
-  console.error("Address API raw response:", text);
-  throw new Error("Address Save Failed. Check console for details.");
-}
-
+        if (!addressResponse.ok) throw new Error("Address Save Failed.");
       }
 
-      const orderItems = cart.map(item => ({
-        product: item.product || item._id,
-        name: item.name,
-        qty: item.qty,
-        image: item.image,
-        mask: item.mask,
-        price: item.price,
-        selectedColor: item.selectedColor,
-        selectedColorName: item.selectedColorName,
-        selectedMaterial: item.selectedMaterial
-      }));
+      // 2. Load Razorpay SDK
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) {
+          throw new Error('Razorpay SDK failed to load.');
+      }
 
-      const orderPayload = {
-        orderItems,
-        shippingAddress: formData,
-        paymentMethod: 'Card',
-        totalPrice: cartTotal
+      // ✅ 3. FETCH KEY FROM BACKEND (The Fix)
+      const keyRes = await fetch('http://localhost:5000/api/config/razorpay');
+      const keyId = await keyRes.text();
+
+      if (!keyId) throw new Error("Could not fetch Payment Key from server");
+
+      // 4. Open Payment Window
+      const options = {
+          key: keyId, // ✅ Use the key fetched from backend
+          amount: Math.round(cartTotal * 100),
+          currency: "INR",
+          name: "VizNest Store",
+          description: "Order Payment",
+          image: "https://via.placeholder.com/150", 
+          
+          handler: async function (response) {
+              try {
+                  const orderItems = cart.map(item => ({
+                    product: item.product || item._id,
+                    name: item.name,
+                    qty: item.qty,
+                    image: item.image,
+                    mask: item.mask,
+                    price: item.price,
+                    selectedColor: item.selectedColor,
+                    selectedColorName: item.selectedColorName,
+                    selectedMaterial: item.selectedMaterial
+                  }));
+
+                  const orderPayload = {
+                    orderItems,
+                    shippingAddress: formData,
+                    paymentMethod: 'Online',
+                    paymentResult: {
+                        id: response.razorpay_payment_id,
+                        status: 'COMPLETED',
+                        update_time: new Date().toISOString(),
+                        email_address: user.email
+                    },
+                    totalPrice: cartTotal
+                  };
+
+                  const res = await fetch('http://localhost:5000/api/orders', {
+                    method: 'POST',
+                    headers: { 
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify(orderPayload)
+                  });
+
+                  if (!res.ok) throw new Error('Order creation failed');
+
+                  await clearCart();
+                  navigate('/profile'); 
+                  alert("Payment Successful! Order Placed.");
+
+              } catch (saveErr) {
+                  console.error(saveErr);
+                  alert("Payment success but order save failed.");
+              }
+          },
+          prefill: {
+              name: user?.name,
+              email: user?.email,
+              contact: formData.phone
+          },
+          theme: {
+              color: "#4f46e5"
+          }
       };
 
-      const res = await fetch('http://localhost:5000/api/orders', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify(orderPayload)
-      });
-
-      if (!res.ok) throw new Error('Order failed');
-
-      await clearCart();
-      navigate('/order-success');
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+      setLoading(false);
 
     } catch (err) {
       setError(err.message || 'Checkout failed. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
@@ -245,7 +296,6 @@ const Checkout = () => {
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                         />
                     </div>
-                    {/* ✅ FIX 3: Added State Input Field */}
                     <div>
                         <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">State / Province</label>
                         <input 

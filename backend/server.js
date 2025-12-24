@@ -56,6 +56,9 @@ app.use((err, req, res, next) => {
   console.error("🔥 Server Error:", err.stack);
   res.status(500).json({ message: 'Server error', error: err.message });
 });
+app.get('/api/config/razorpay', (req, res) => {
+  res.send(process.env.RAZORPAY_KEY_ID);
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
