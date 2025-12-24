@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Trash2, Edit2, X, Package, DollarSign,
-  ShoppingCart, Clock, Search, Eye, ArrowLeft, Upload, Images, Minus, Layers, Calendar, Filter
+  ShoppingCart, Clock, Search, Eye, ArrowLeft, Upload, Images, Minus, Layers, Calendar, Filter, MapPin, Phone
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ComposedChart 
@@ -16,7 +16,6 @@ const CATEGORIES = [
   "Art", "Kitchen", "Office", "Outdoor"
 ];
 
-// ✅ 1. FIXED MATERIALS LIST
 const DEFAULT_MATERIALS = [
   { name: 'Standard', price: 0, description: 'Base factory finish' },
   { name: 'Matte', price: 0, description: 'Soft, non-reflective' },
@@ -31,15 +30,12 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [notification, setNotification] = useState({ type: '', message: '' });
 
-  // Data States
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [stats, setStats] = useState({ totalRevenue: 0, totalOrders: 0, totalProducts: 0, pendingOrders: 0 });
 
-  // Graph State
   const [dateRange, setDateRange] = useState('7');
 
-  // Form States
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [productForm, setProductForm] = useState({
@@ -49,7 +45,6 @@ const Admin = () => {
   const [detailsList, setDetailsList] = useState([{ label: '', value: '' }]);
   const [materialsList, setMaterialsList] = useState(JSON.parse(JSON.stringify(DEFAULT_MATERIALS)));
 
-  // File States
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [galleryFiles, setGalleryFiles] = useState([]);
@@ -57,14 +52,12 @@ const Admin = () => {
   const [maskFile, setMaskFile] = useState(null);
   const [maskPreview, setMaskPreview] = useState(null);
 
-  // Filter States
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderFilter, setOrderFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
 
   const token = localStorage.getItem('token');
 
-  // --- AUTH CHECK ---
   useEffect(() => {
     if (!localStorage.getItem('token')) {
       navigate('/login');
@@ -86,7 +79,6 @@ const Admin = () => {
     setTimeout(() => setNotification({ type: '', message: '' }), 4000);
   };
 
-  // --- FETCH FUNCTIONS ---
   const fetchProducts = async () => {
     try {
       const res = await fetch(`${API_URL}/api/products`);
@@ -116,20 +108,16 @@ const Admin = () => {
     setStats({ totalRevenue, totalOrders: orders.length, totalProducts: products.length, pendingOrders });
   };
 
-  // --- GRAPH DATA LOGIC ---
   const graphData = useMemo(() => {
     if (!orders.length) return [];
-
     const now = new Date();
     let filteredOrders = orders;
-
     if (dateRange !== 'all') {
         const days = parseInt(dateRange);
         const cutoff = new Date();
         cutoff.setDate(now.getDate() - days);
         filteredOrders = orders.filter(o => new Date(o.createdAt) >= cutoff);
     }
-
     const grouped = {};
     filteredOrders.forEach(order => {
         const date = new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -139,11 +127,9 @@ const Admin = () => {
         grouped[date].revenue += order.totalPrice;
         grouped[date].count += 1;
     });
-
     return Object.values(grouped).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [orders, dateRange]);
 
-  // --- FORM HANDLERS ---
   const handleDetailChange = (index, field, value) => {
     const updatedDetails = [...detailsList];
     updatedDetails[index][field] = value;
@@ -188,19 +174,16 @@ const Admin = () => {
       name: product.name, price: product.price, category: product.category,
       description: product.description || '', customizable: product.customizable || false,
     });
-    
     if (product.details && Array.isArray(product.details)) {
       setDetailsList(product.details.length > 0 ? product.details : [{ label: '', value: '' }]);
     } else {
       setDetailsList([{ label: '', value: '' }]);
     }
-
     const mergedMaterials = DEFAULT_MATERIALS.map(def => {
         const existing = product.materials?.find(m => m.name === def.name);
         return existing ? { ...def, price: existing.price } : def;
     });
     setMaterialsList(mergedMaterials);
-
     setImagePreview(product.image);
     setGalleryPreviews(product.images || []);
     if (product.mask) setMaskPreview(product.mask);
@@ -216,22 +199,17 @@ const Admin = () => {
       formData.append('category', productForm.category);
       formData.append('description', productForm.description);
       formData.append('customizable', productForm.customizable);
-      
       const validDetails = detailsList.filter(d => d.label && d.value);
       formData.append('details', JSON.stringify(validDetails));
       formData.append('materials', JSON.stringify(materialsList));
-
       if (imageFile) formData.append('image', imageFile);
       if (maskFile && productForm.customizable) formData.append('mask', maskFile);
       for (let i = 0; i < galleryFiles.length; i++) formData.append('gallery', galleryFiles[i]);
-
       const url = editingProduct ? `${API_URL}/api/products/${editingProduct}` : `${API_URL}/api/products`;
       const method = editingProduct ? 'PUT' : 'POST';
-
       const res = await fetch(url, {
         method, headers: { 'Authorization': `Bearer ${token}` }, body: formData
       });
-
       if (!res.ok) throw new Error('Save failed');
       await fetchProducts();
       resetProductForm();
@@ -265,17 +243,11 @@ const Admin = () => {
     } catch (err) { showNotification('error', 'Failed to update status'); }
   };
 
-  // --- FILTER LOGIC (Corrected) ---
   const filteredOrders = orders.filter(order => {
     const matchesFilter = orderFilter === 'All' || order.status === orderFilter;
     const matchesSearch = !searchTerm || order._id.toLowerCase().includes(searchTerm.toLowerCase()) || order.user?.name?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
-
-  const getStatusColor = (status) => {
-    const colors = { Delivered: 'bg-green-100 text-green-700', Shipped: 'bg-blue-100 text-blue-700', Processing: 'bg-amber-100 text-amber-700', Pending: 'bg-gray-100 text-gray-700', Cancelled: 'bg-red-100 text-red-700' };
-    return colors[status] || 'bg-gray-100 text-gray-700';
-  };
 
   if (localStorage.getItem('token') && !user) {
      return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-xl animate-pulse">Loading Dashboard...</div></div>;
@@ -302,7 +274,6 @@ const Admin = () => {
 
       <div className="max-w-7xl mx-auto px-6 py-10">
         
-        {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -312,23 +283,15 @@ const Admin = () => {
               <div className="bg-white p-6 rounded-xl shadow-sm border"><Clock className="w-10 h-10 text-orange-600" /><p className="text-gray-600 font-medium">Pending</p><p className="text-3xl font-bold mt-2">{stats.pendingOrders}</p></div>
             </div>
 
-            {/* ANALYTICS GRAPH */}
             <div className="bg-white p-8 rounded-xl shadow-sm border">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-2xl font-bold text-gray-900">Earnings & Orders Analytics</h2>
                     <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
                         {['7', '30', '90', 'all'].map(range => (
-                            <button 
-                                key={range} 
-                                onClick={() => setDateRange(range)}
-                                className={`px-4 py-1.5 rounded-md text-sm font-bold transition ${dateRange === range ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                            >
-                                {range === 'all' ? 'All Time' : `${range} Days`}
-                            </button>
+                            <button key={range} onClick={() => setDateRange(range)} className={`px-4 py-1.5 rounded-md text-sm font-bold transition ${dateRange === range ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{range === 'all' ? 'All Time' : `${range} Days`}</button>
                         ))}
                     </div>
                 </div>
-                
                 <div className="h-[400px] w-full">
                     {graphData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
@@ -337,34 +300,26 @@ const Admin = () => {
                                 <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
                                 <YAxis yAxisId="left" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
                                 <YAxis yAxisId="right" orientation="right" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip 
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
-                                    formatter={(value, name) => [name === 'revenue' ? `₹${value}` : value, name === 'revenue' ? 'Earnings' : 'Orders']}
-                                />
+                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} formatter={(value, name) => [name === 'revenue' ? `₹${value}` : value, name === 'revenue' ? 'Earnings' : 'Orders']} />
                                 <Legend />
                                 <Bar yAxisId="left" dataKey="revenue" name="Earnings" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={50} />
                                 <Line yAxisId="right" type="monotone" dataKey="count" name="Orders" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
                             </ComposedChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                            <Calendar size={48} className="mb-2 opacity-50" />
-                            <p>No data available for this period.</p>
-                        </div>
+                        <div className="h-full flex flex-col items-center justify-center text-gray-400"><Calendar size={48} className="mb-2 opacity-50" /><p>No data available for this period.</p></div>
                     )}
                 </div>
             </div>
           </div>
         )}
 
-        {/* PRODUCTS TAB */}
         {activeTab === 'products' && (
           <div>
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-bold">Products Management</h2>
               <button onClick={() => { resetProductForm(); setShowProductModal(true); }} className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-lg hover:bg-indigo-700 font-bold"><Plus size={20} /> Add Product</button>
             </div>
-            
             <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
                <table className="w-full text-left text-base">
                   <thead className="bg-gray-50 border-b text-gray-500 font-bold uppercase text-sm">
@@ -379,21 +334,11 @@ const Admin = () => {
                   <tbody className="divide-y">
                       {products.map(product => (
                          <tr key={product._id} className="hover:bg-gray-50 transition">
-                            <td className="p-5">
-                               <div className="flex items-center gap-4">
-                                  <img src={product.image} alt={product.name} className="w-14 h-14 rounded-lg object-cover border" />
-                                  <span className="font-bold text-gray-800">{product.name}</span>
-                               </div>
-                            </td>
+                            <td className="p-5"><div className="flex items-center gap-4"><img src={product.image} alt={product.name} className="w-14 h-14 rounded-lg object-cover border" /><span className="font-bold text-gray-800">{product.name}</span></div></td>
                             <td className="p-5 text-gray-600">{product.category}</td>
                             <td className="p-5 font-bold text-gray-900">₹{product.price}</td>
                             <td className="p-5 text-gray-600 font-medium">{product.sold || 0} units</td>
-                            <td className="p-5 text-right">
-                               <div className="flex justify-end gap-3">
-                                  <button onClick={() => startEdit(product)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"><Edit2 size={18} /></button>
-                                  <button onClick={() => handleDeleteProduct(product._id)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"><Trash2 size={18} /></button>
-                               </div>
-                            </td>
+                            <td className="p-5 text-right"><div className="flex justify-end gap-3"><button onClick={() => startEdit(product)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"><Edit2 size={18} /></button><button onClick={() => handleDeleteProduct(product._id)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"><Trash2 size={18} /></button></div></td>
                          </tr>
                       ))}
                   </tbody>
@@ -403,7 +348,7 @@ const Admin = () => {
           </div>
         )}
 
-        {/* ORDERS TAB - ITEM WISE VIEW */}
+        {/* ✅ ORDERS TAB UPDATED AS REQUESTED */}
         {activeTab === 'orders' && (
            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
              <div className="p-6 flex gap-4 border-b bg-gray-50 items-center">
@@ -411,17 +356,14 @@ const Admin = () => {
                    <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
                    <input type="text" placeholder="Search orders..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
                 </div>
-                
-                {/* ✅ UPDATED FILTER OPTIONS */}
-                <div className="">
-                    {/* <Filter className="absolute left-4 top-3.5 text-gray-400" size={18} /> */}
-                    <select value={orderFilter} onChange={e => setOrderFilter(e.target.value)} className="pl-12 pr-8 py-3 border rounded-xl cursor-pointer bg-white font-medium appearance-none hover:border-gray-400 transition focus:ring-2 focus:ring-indigo-500 outline-none">
+                <div>
+                   <select value={orderFilter} onChange={e => setOrderFilter(e.target.value)} className="pl-6 pr-8 py-3 border rounded-xl cursor-pointer bg-white font-medium appearance-none hover:border-gray-400 transition focus:ring-2 focus:ring-indigo-500 outline-none">
                        <option value="All">All Status</option>
                        <option value="Processing">Processing</option>
                        <option value="Shipped">Shipped</option>
                        <option value="Delivered">Delivered</option>
                        <option value="Cancelled">Cancelled</option>
-                    </select>
+                   </select>
                 </div>
              </div>
              
@@ -431,7 +373,7 @@ const Admin = () => {
                         <th className="p-5">Image</th>
                         <th className="p-5">Product Details</th>
                         <th className="p-5">Order ID</th>
-                        <th className="p-5">Customer</th>
+                        <th className="p-5">Customer & Address</th>
                         <th className="p-5">Price</th>
                         <th className="p-5">Status</th>
                     </tr>
@@ -439,9 +381,27 @@ const Admin = () => {
                 <tbody className="divide-y divide-gray-100">
                   {filteredOrders.map(order => (
                       order.orderItems.map((item, idx) => (
-                        <tr key={`${order._id}-${idx}`} className="hover:bg-gray-50 group transition">
+                        <tr key={`${order._id}-${idx}`} className="hover:bg-gray-50 transition">
                             <td className="p-5">
-                                <img src={item.image} alt={item.name} className="w-16 h-16 rounded-lg object-cover border bg-white shadow-sm" />
+                                {/* ✅ EDITED IMAGE FOR CUSTOMIZED PRODUCTS */}
+                                <div className="relative w-16 h-16 rounded-lg overflow-hidden border bg-white shadow-sm flex-shrink-0">
+                                    <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-contain p-2" />
+                                    {item.selectedColor && item.mask && (
+                                        <div 
+                                            className="absolute inset-0 mix-blend-multiply pointer-events-none" 
+                                            style={{ 
+                                                backgroundColor: item.selectedColor, 
+                                                maskImage: `url(${item.mask})`, 
+                                                WebkitMaskImage: `url(${item.mask})`, 
+                                                maskSize: '75%', 
+                                                WebkitMaskSize: '75%', 
+                                                maskPosition: 'center', 
+                                                WebkitMaskPosition: 'center', 
+                                                maskRepeat: 'no-repeat' 
+                                            }} 
+                                        />
+                                    )}
+                                </div>
                             </td>
                             <td className="p-5">
                                 <div className="font-bold text-gray-900 text-lg">{item.name}</div>
@@ -456,9 +416,32 @@ const Admin = () => {
                             <td className="p-5 font-mono text-gray-500 text-sm">
                                 #{order._id.slice(-6).toUpperCase()}
                             </td>
-                            <td className="p-5">
-                                <div className="font-bold text-gray-900">{order.user?.name || "Guest"}</div>
-                                <div className="text-sm text-gray-500 flex items-center gap-1"><Layers size={14}/> {order.shippingAddress?.city}</div>
+                            <td className="p-5 relative">
+                                {/* ✅ ADDRESS POPUP ON HOVER */}
+                                <div className="group relative inline-block cursor-help">
+                                    <div className="font-bold text-indigo-600 border-b border-dotted border-indigo-300">
+                                      {order.user?.name || "Guest"}
+                                    </div>
+                                    <div className="text-sm text-gray-500">{order.shippingAddress?.city}</div>
+                                    
+                                    {/* Standard Standard Hover Popup */}
+                                    <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-[60] bg-gray-900 text-white p-4 rounded-xl shadow-2xl w-64 text-sm pointer-events-none">
+                                        <p className="font-bold border-b border-gray-700 pb-1 mb-2 flex items-center gap-2">
+                                            <MapPin size={14} className="text-indigo-400"/> Shipping Details
+                                        </p>
+                                        <p className="text-gray-300">
+                                            {order.shippingAddress?.address}<br/>
+                                            {order.shippingAddress?.city}, {order.shippingAddress?.postalCode}<br/>
+                                            {order.shippingAddress?.country}
+                                        </p>
+                                        {order.shippingAddress?.phone && (
+                                            <p className="mt-2 text-indigo-300 font-medium flex items-center gap-1">
+                                                <Phone size={12}/> {order.shippingAddress.phone}
+                                            </p>
+                                        )}
+                                        <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-900 rotate-45"></div>
+                                    </div>
+                                </div>
                             </td>
                             <td className="p-5 font-bold text-gray-900 text-lg">
                                 ₹{(item.price * item.qty).toFixed(2)}
@@ -468,11 +451,10 @@ const Admin = () => {
                                     <select 
                                         value={order.status} 
                                         onChange={(e) => updateOrderStatus(order._id, e.target.value)}
-                                        className={`border rounded-lg px-3 py-2 text-sm font-bold cursor-pointer outline-none shadow-sm transition hover:shadow-md ${
-                                            order.status === 'Delivered' ? 'bg-green-50 text-green-700 border-green-200' :
-                                            order.status === 'Processing' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                            order.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
-                                            'bg-white text-gray-700 border-gray-300'
+                                        className={`border rounded-lg px-3 py-2 text-sm font-bold cursor-pointer outline-none ${
+                                            order.status === 'Delivered' ? 'bg-green-50 text-green-700' :
+                                            order.status === 'Processing' ? 'bg-amber-50 text-amber-700' :
+                                            order.status === 'Cancelled' ? 'bg-red-50 text-red-700' : 'bg-white'
                                         }`}
                                     >
                                         <option>Processing</option>
@@ -489,11 +471,9 @@ const Admin = () => {
                   ))}
                 </tbody>
              </table>
-             {orders.length === 0 && <div className="p-12 text-center text-gray-500 text-lg">No orders found matching criteria.</div>}
            </div>
         )}
 
-        {/* MODAL: ADD/EDIT PRODUCT */}
         {showProductModal && (
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
              <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-8 relative">
@@ -506,7 +486,6 @@ const Admin = () => {
                    </div>
                    <select className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-indigo-500 outline-none bg-white font-medium" value={productForm.category} onChange={e => setProductForm({...productForm, category: e.target.value})}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select>
                    <textarea className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-indigo-500 outline-none font-medium" placeholder="Description" rows="3" value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} />
-                   
                    <div className="grid grid-cols-2 gap-4">
                        <div className="border-2 border-dashed border-gray-300 p-6 text-center rounded-xl hover:bg-gray-50 transition cursor-pointer relative">
                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleMainImageChange} /> 
@@ -519,7 +498,6 @@ const Admin = () => {
                            <div className="flex justify-center mt-2 gap-1">{galleryPreviews.slice(0,3).map((s,i)=><img key={i} src={s} className="h-10 w-10 rounded border"/>)}</div>
                        </div>
                    </div>
-
                    <div className="bg-gray-50 p-5 rounded-xl border border-gray-100">
                        <div className="flex justify-between items-center mb-3">
                            <label className="font-bold text-gray-700">Specifications (Details)</label>
@@ -533,13 +511,11 @@ const Admin = () => {
                            </div>
                        ))}
                    </div>
-
                    <div className="bg-purple-50 p-5 rounded-xl border border-purple-100">
                        <div className="flex items-center gap-2 mb-4">
                            <input type="checkbox" checked={productForm.customizable} onChange={e => setProductForm({...productForm, customizable: e.target.checked})} className="w-5 h-5 accent-purple-600" />
                            <label className="font-bold text-purple-900 text-lg">Enable Customization Studio</label>
                        </div>
-                       
                        {productForm.customizable && (
                            <div className="space-y-5 animate-in fade-in slide-in-from-top-2">
                                <div>
@@ -547,43 +523,27 @@ const Admin = () => {
                                    <input type="file" accept="image/*" onChange={handleMaskChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:bg-white file:text-purple-700 hover:file:bg-purple-50 border rounded-full p-1" />
                                    {maskPreview && <img src={maskPreview} className="mt-2 h-20 border rounded bg-white" />}
                                </div>
-
                                <div className="bg-white p-4 rounded-xl border border-purple-100">
-                                   <div className="flex justify-between mb-4">
-                                       <label className="font-bold text-purple-800 flex items-center gap-2"><Layers size={18}/> Material Pricing</label>
-                                   </div>
-                                   
+                                   <div className="flex justify-between mb-4"><label className="font-bold text-purple-800 flex items-center gap-2"><Layers size={18}/> Material Pricing</label></div>
                                    <div className="grid grid-cols-12 gap-3 text-xs text-gray-500 font-bold mb-2 uppercase px-1">
                                        <div className="col-span-4">Material Name</div>
                                        <div className="col-span-3">Extra Price (₹)</div>
                                        <div className="col-span-5">Description</div>
                                    </div>
-
                                    {materialsList.map((m, i) => (
                                        <div key={i} className="grid grid-cols-12 gap-3 items-center mb-2">
-                                           <div className="col-span-4 font-bold text-gray-800 bg-gray-50 p-2 rounded border border-gray-100">
-                                               {m.name}
-                                           </div>
+                                           <div className="col-span-4 font-bold text-gray-800 bg-gray-50 p-2 rounded border border-gray-100">{m.name}</div>
                                            <div className="col-span-3 relative">
-                                               <input 
-                                                   type="number" 
-                                                   placeholder="0" 
-                                                   className="w-full border p-2 rounded pl-6 font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none" 
-                                                   value={m.price} 
-                                                   onChange={e => handleMaterialPriceChange(i, e.target.value)} 
-                                               />
+                                               <input type="number" placeholder="0" className="w-full border p-2 rounded pl-6 font-bold text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none" value={m.price} onChange={e => handleMaterialPriceChange(i, e.target.value)} />
                                                <span className="absolute left-2 top-2 text-gray-400 font-bold">₹</span>
                                            </div>
-                                           <div className="col-span-5 text-xs text-gray-500 bg-gray-50 p-2 rounded border border-gray-100 italic">
-                                               {m.description}
-                                           </div>
+                                           <div className="col-span-5 text-xs text-gray-500 bg-gray-50 p-2 rounded border border-gray-100 italic">{m.description}</div>
                                        </div>
                                    ))}
                                </div>
                            </div>
                        )}
                    </div>
-
                    <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition">Save Product</button>
                 </form>
              </div>

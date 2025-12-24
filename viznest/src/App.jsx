@@ -6,6 +6,7 @@ import { ProductProvider } from './context/ProductContext';
 import { OrdersProvider } from './context/OrdersContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { NotificationProvider } from './context/NotificationContext';
+import LoginSuccess from './pages/LoginSuccess';
 
 // Import your pages
 import Home from './pages/Home';
@@ -20,6 +21,7 @@ import Admin from './pages/Admin';
 import About from './pages/About';
 import OrderSuccess from './pages/OrderSuccess';
 import WishlistPage from './pages/WishlistPage'; // ✅ THIS WAS MISSING!
+import ForgotPassword from './pages/ForgotPassword';
 
 // Import your components
 import Navbar from './components/Navbar';
@@ -38,6 +40,9 @@ function App() {
                     <Navbar />
                     <main className="flex-grow">
                       <Routes>
+                
+
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
                         <Route path="/" element={<Home />} />
                         <Route path="/shop" element={<Shop />} />
                         <Route path="/login" element={<Login />} />
@@ -50,6 +55,7 @@ function App() {
                         <Route path="/about" element={<About />} />
                         <Route path="/order-success" element={<OrderSuccess />} />
                         <Route path="/wishlist" element={<WishlistPage />} />
+                        <Route path="/login-success" element={<LoginSuccess />} />
                       </Routes>
                     </main>
                     <Footer />

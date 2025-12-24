@@ -15,9 +15,11 @@ const Checkout = () => {
   const [selectedAddressId, setSelectedAddressId] = useState('new');
   const [saveNewAddress, setSaveNewAddress] = useState(false);
 
+  // ✅ FIX 1: Added 'state' to formData state
   const [formData, setFormData] = useState({
     address: '',
     city: '',
+    state: '', 
     postalCode: '',
     country: '',
     phone: ''
@@ -52,6 +54,7 @@ const Checkout = () => {
     setFormData({
       address: addr.street,
       city: addr.city,
+      state: addr.state || '', // ✅ FIX: Populate state
       postalCode: addr.zip,
       country: addr.country,
       phone: addr.phone || user.phone || '' 
@@ -61,7 +64,8 @@ const Checkout = () => {
   const handleAddressSelection = (id) => {
     setSelectedAddressId(id);
     if (id === 'new') {
-      setFormData({ address: '', city: '', postalCode: '', country: '', phone: user.phone || '' });
+      // ✅ FIX: Reset state on new address
+      setFormData({ address: '', city: '', state: '', postalCode: '', country: '', phone: user.phone || '' });
     } else {
       const addr = savedAddresses.find(a => a._id === id);
       if (addr) fillFormWithAddress(addr);
@@ -80,8 +84,9 @@ const Checkout = () => {
     try {
       const token = localStorage.getItem('token');
 
+      // ✅ FIX 2: Strict Error Checking for Address Save
       if (selectedAddressId === 'new' && saveNewAddress) {
-        await fetch('http://localhost:5000/api/auth/address', {
+        const addressResponse = await fetch('http://localhost:5000/api/auth/address', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -90,13 +95,21 @@ const Checkout = () => {
           body: JSON.stringify({
             street: formData.address,
             city: formData.city,
+            state: formData.state, // ✅ Pass state to backend
             zip: formData.postalCode,
             country: formData.country,
             phone: formData.phone,
-            state: 'N/A',
             isPrimary: savedAddresses.length === 0
           })
         });
+
+        // If server rejects address, stop here and show error
+        if (!addressResponse.ok) {
+  const text = await addressResponse.text(); // 👈 read raw HTML/text
+  console.error("Address API raw response:", text);
+  throw new Error("Address Save Failed. Check console for details.");
+}
+
       }
 
       const orderItems = cart.map(item => ({
@@ -232,6 +245,19 @@ const Checkout = () => {
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                         />
                     </div>
+                    {/* ✅ FIX 3: Added State Input Field */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">State / Province</label>
+                        <input 
+                            type="text" required 
+                            value={formData.state}
+                            onChange={e => setFormData({...formData, state: e.target.value})}
+                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">ZIP Code</label>
                         <input 
@@ -241,9 +267,6 @@ const Checkout = () => {
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                         />
                     </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Country</label>
                         <input 
@@ -253,16 +276,17 @@ const Checkout = () => {
                             className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Phone</label>
-                        <input 
-                            type="tel" required 
-                            value={formData.phone}
-                            onChange={e => setFormData({...formData, phone: e.target.value})}
-                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                            placeholder="+91 98765 43210"
-                        />
-                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">Phone</label>
+                    <input 
+                        type="tel" required 
+                        value={formData.phone}
+                        onChange={e => setFormData({...formData, phone: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                        placeholder="+91 98765 43210"
+                    />
                 </div>
 
                 {selectedAddressId === 'new' && (
@@ -290,7 +314,6 @@ const Checkout = () => {
               <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2 mb-6 custom-scrollbar">
                 {cart.map(item => (
                   <div key={item.cartId || item._id} className="flex gap-6 items-start border-b border-gray-50 pb-6 last:border-0 last:pb-0">
-                    {/* ✅ Corrected Image Container for Customized Products */}
                     <div className="relative w-24 h-24 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0">
                         <img 
                           src={item.image} 
@@ -315,7 +338,6 @@ const Checkout = () => {
                         )}
                     </div>
                     
-                    {/* ✅ Increased Font for Product Details */}
                     <div className="flex-1 min-w-0 pt-1">
                         <p className="font-bold text-gray-900 text-lg leading-tight mb-1 truncate">{item.name}</p>
                         <p className="text-sm font-semibold text-indigo-600 mb-2">Qty: {item.qty}</p>
