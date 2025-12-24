@@ -26,6 +26,8 @@ import ForgotPassword from './pages/ForgotPassword';
 // Import your components
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import BlogPost from './pages/BlogPost';
+
 
 function App() {
   return (
@@ -56,6 +58,7 @@ function App() {
                         <Route path="/order-success" element={<OrderSuccess />} />
                         <Route path="/wishlist" element={<WishlistPage />} />
                         <Route path="/login-success" element={<LoginSuccess />} />
+                        <Route path="/blog/:id" element={<BlogPost />} />
                       </Routes>
                     </main>
                     <Footer />
