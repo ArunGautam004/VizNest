@@ -7,6 +7,8 @@ const Footer = () => {
     <footer className="bg-gray-900 text-gray-300 pt-16 pb-8 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+          
+          {/* Brand Section */}
           <div>
             <h2 className="text-2xl font-bold text-white tracking-tighter mb-4">
               Viz<span className="text-indigo-500">Nest</span>
@@ -27,6 +29,7 @@ const Footer = () => {
             </div>
           </div>
 
+          {/* Shop Links */}
           <div>
             <h3 className="text-white font-bold mb-6">Shop</h3>
             <ul className="space-y-3 text-sm">
@@ -37,15 +40,17 @@ const Footer = () => {
             </ul>
           </div>
 
+          {/* Company Links */}
           <div>
             <h3 className="text-white font-bold mb-6">Company</h3>
             <ul className="space-y-3 text-sm">
               <li><Link to="/about" className="hover:text-indigo-400 transition">About Us</Link></li>
-              <li><Link to="/blog" className="hover:text-indigo-400 transition">Blog</Link></li>
-              <li><Link to="/sustainability" className="hover:text-indigo-400 transition">Sustainability</Link></li>
+              <li><Link to="/blog/1" className="hover:text-indigo-400 transition">Blog</Link></li>
+              {/* Sustainability Link Removed */}
             </ul>
           </div>
 
+          {/* Contact Section */}
           <div>
             <h3 className="text-white font-bold mb-6">Contact</h3>
             <ul className="space-y-3 text-sm">
@@ -55,7 +60,8 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-2">
                 <MapPin size={16} />
-                <span>123 Design Lane, New York, NY</span>
+                {/* Updated Address */}
+                <span>Lovely Professional University</span>
               </li>
             </ul>
           </div>

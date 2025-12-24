@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Edit2, MapPin, Phone, Trash2, X, Camera, ChevronDown, ChevronUp, Package, ExternalLink, Calendar, Loader } from 'lucide-react';
+// ✅ IMPORT DOWNLOAD ICON
+import { Edit2, MapPin, Phone, Trash2, X, Camera, ChevronDown, ChevronUp, Package, ExternalLink, Calendar, Loader, Download } from 'lucide-react';
 
 const Profile = () => {
   const { user, logout } = useAuth();
@@ -38,7 +39,6 @@ const Profile = () => {
             return;
         }
 
-        // Fetch User Details
         const userRes = await fetch('http://localhost:5000/api/auth/profile', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -54,7 +54,6 @@ const Profile = () => {
             avatar: null 
         });
 
-        // Fetch Orders
         const ordersRes = await fetch('http://localhost:5000/api/orders/myorders', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -76,7 +75,6 @@ const Profile = () => {
     if (user) {
         fetchProfileData();
     } else {
-        // ✅ FIX: If no user, stop loading immediately so we don't spin forever
         setLoading(false);
     }
   }, [user]);
@@ -87,6 +85,36 @@ const Profile = () => {
     const endIndex = nextPage * ORDERS_PER_PAGE;
     setVisibleOrders(allOrders.slice(0, endIndex));
     setPage(nextPage);
+  };
+
+  // --- INVOICE DOWNLOAD HANDLER ---
+  const handleDownloadInvoice = async (orderId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/api/orders/${orderId}/invoice`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+         const err = await res.json();
+         alert(err.message || "Failed to download invoice");
+         return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice-${orderId.slice(-6).toUpperCase()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      
+    } catch (err) {
+      console.error("Download failed", err);
+      alert("Something went wrong downloading the invoice");
+    }
   };
 
   // --- HANDLERS ---
@@ -324,15 +352,27 @@ const Profile = () => {
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[10px] text-gray-400 font-mono mb-1">ID: #{order._id.slice(-8).toUpperCase()}</p>
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                                            order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
-                                            order.status === 'Shipped' ? 'bg-blue-100 text-blue-700' :
-                                            order.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
-                                            'bg-amber-100 text-amber-700'
-                                        }`}>
-                                            {order.status === 'Processing' && <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5 animate-pulse"></span>}
-                                            {order.status}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                                              order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
+                                              order.status === 'Shipped' ? 'bg-blue-100 text-blue-700' :
+                                              order.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+                                              'bg-amber-100 text-amber-700'
+                                          }`}>
+                                              {order.status === 'Processing' && <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5 animate-pulse"></span>}
+                                              {order.status}
+                                          </span>
+                                          {/* ✅ INVOICE BUTTON */}
+                                          {order.status === 'Delivered' && (
+                                              <button 
+                                                  onClick={() => handleDownloadInvoice(order._id)}
+                                                  className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 border border-indigo-200 px-3 py-1 rounded-full hover:bg-indigo-50 transition"
+                                                  title="Download Invoice"
+                                              >
+                                                  <Download size={12} /> PDF
+                                              </button>
+                                          )}
+                                        </div>
                                     </div>
                                 </div>
 

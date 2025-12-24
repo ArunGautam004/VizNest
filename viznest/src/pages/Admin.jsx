@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Trash2, Edit2, X, Package, DollarSign,
-  ShoppingCart, Clock, Search, Eye, ArrowLeft, Upload, Images, Minus, Layers, Calendar, Filter, MapPin, Phone
+  ShoppingCart, Clock, Search, Eye, ArrowLeft, Upload, Images, Minus, Layers, Calendar, Filter, MapPin, Phone, FileText
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ComposedChart 
@@ -52,7 +52,6 @@ const Admin = () => {
   const [maskFile, setMaskFile] = useState(null);
   const [maskPreview, setMaskPreview] = useState(null);
 
-  const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderFilter, setOrderFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -348,7 +347,6 @@ const Admin = () => {
           </div>
         )}
 
-        {/* ✅ ORDERS TAB UPDATED AS REQUESTED */}
         {activeTab === 'orders' && (
            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
              <div className="p-6 flex gap-4 border-b bg-gray-50 items-center">
@@ -373,6 +371,8 @@ const Admin = () => {
                         <th className="p-5">Image</th>
                         <th className="p-5">Product Details</th>
                         <th className="p-5">Order ID</th>
+                        {/* ✅ NEW COLUMN FOR INVOICE */}
+                        <th className="p-5">Invoice No</th>
                         <th className="p-5">Customer & Address</th>
                         <th className="p-5">Price</th>
                         <th className="p-5">Status</th>
@@ -383,7 +383,6 @@ const Admin = () => {
                       order.orderItems.map((item, idx) => (
                         <tr key={`${order._id}-${idx}`} className="hover:bg-gray-50 transition">
                             <td className="p-5">
-                                {/* ✅ EDITED IMAGE FOR CUSTOMIZED PRODUCTS */}
                                 <div className="relative w-16 h-16 rounded-lg overflow-hidden border bg-white shadow-sm flex-shrink-0">
                                     <img src={item.image} alt={item.name} className="absolute inset-0 w-full h-full object-contain p-2" />
                                     {item.selectedColor && item.mask && (
@@ -416,15 +415,27 @@ const Admin = () => {
                             <td className="p-5 font-mono text-gray-500 text-sm">
                                 #{order._id.slice(-6).toUpperCase()}
                             </td>
+                            
+                            {/* ✅ INVOICE DATA CELL */}
+                            <td className="p-5">
+                                {order.status === 'Delivered' ? (
+                                    <div className="flex items-center gap-2">
+                                        <FileText size={16} className="text-indigo-600"/>
+                                        <span className="font-mono font-bold text-indigo-700 text-sm">
+                                            INV-{order._id.slice(-6).toUpperCase()}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span className="text-gray-400 text-sm italic">-</span>
+                                )}
+                            </td>
+
                             <td className="p-5 relative">
-                                {/* ✅ ADDRESS POPUP ON HOVER */}
                                 <div className="group relative inline-block cursor-help">
                                     <div className="font-bold text-indigo-600 border-b border-dotted border-indigo-300">
                                       {order.user?.name || "Guest"}
                                     </div>
                                     <div className="text-sm text-gray-500">{order.shippingAddress?.city}</div>
-                                    
-                                    {/* Standard Standard Hover Popup */}
                                     <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-[60] bg-gray-900 text-white p-4 rounded-xl shadow-2xl w-64 text-sm pointer-events-none">
                                         <p className="font-bold border-b border-gray-700 pb-1 mb-2 flex items-center gap-2">
                                             <MapPin size={14} className="text-indigo-400"/> Shipping Details
