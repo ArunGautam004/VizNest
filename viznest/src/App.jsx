@@ -7,6 +7,7 @@ import { OrdersProvider } from './context/OrdersContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { NotificationProvider } from './context/NotificationContext';
 import LoginSuccess from './pages/LoginSuccess';
+import ScrollToTop from './components/ScrollToTop';
 
 // Import your pages
 import Home from './pages/Home';
@@ -32,6 +33,7 @@ import BlogPost from './pages/BlogPost';
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AuthProvider>
         <NotificationProvider>
           <ProductProvider>

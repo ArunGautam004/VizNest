@@ -29,7 +29,7 @@ const Checkout = () => {
       if (!user) return;
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/auth/profile', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/profile`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -81,7 +81,7 @@ const Checkout = () => {
     });
   };
 
- const handleSubmit = async (e) => {
+   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) {
       setError('Please log in to checkout');
@@ -92,10 +92,12 @@ const Checkout = () => {
 
     try {
       const token = localStorage.getItem('token');
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      console.log('API URL:', API_URL);
 
       // 1. Save Address if needed (Same as before)
       if (selectedAddressId === 'new' && saveNewAddress) {
-        const addressResponse = await fetch('http://localhost:5000/api/auth/address', {
+        const addressResponse = await fetch(`${API_URL}/api/auth/address`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -121,9 +123,10 @@ const Checkout = () => {
           throw new Error('Razorpay SDK failed to load.');
       }
 
-      // ✅ 3. FETCH KEY FROM BACKEND (The Fix)
-      const keyRes = await fetch('http://localhost:5000/api/config/razorpay');
-      const keyId = await keyRes.text();
+      // ✅ 3. FETCH KEY FROM BACKEND (FIXED: Changed .text() to .json())
+      const keyRes = await fetch(`${API_URL}/api/config/razorpay`);
+      const keyData = await keyRes.json();  // ✅ FIXED: Changed from .text() to .json()
+      const keyId = keyData.key;  // ✅ Extract key from response object
 
       if (!keyId) throw new Error("Could not fetch Payment Key from server");
 
@@ -163,7 +166,7 @@ const Checkout = () => {
                     totalPrice: cartTotal
                   };
 
-                  const res = await fetch('http://localhost:5000/api/orders', {
+                  const res = await fetch(`${API_URL}/api/orders`, {
                     method: 'POST',
                     headers: { 
                       'Content-Type': 'application/json',

@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
 const { protect, admin } = require('../middleware/auth');
-const passport = require('passport'); // 👈 Add this line!
+const passport = require('passport');
 
 // --- 1. SMART REGISTER (Handles Unverified Re-signups) ---
 router.post('/register', async (req, res) => {
@@ -115,6 +115,9 @@ router.post('/login', async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        addresses: user.addresses,
         isAdmin: user.isAdmin,
         token
       });
@@ -189,11 +192,73 @@ router.put('/reset-password', async (req, res) => {
 });
 
 // --- PROFILE ROUTES (Requires Protect Middleware) ---
+
+// --- GET PROFILE ---
 router.get('/profile', protect, async (req, res) => {
   const user = await User.findById(req.user._id).select('-password');
   user ? res.json(user) : res.status(404).json({ message: 'User not found' });
 });
 
+// --- UPDATE PROFILE (WITH AVATAR) ---
+const uploadAvatar = upload.single('avatar');
+router.put('/profile', protect, uploadAvatar, async (req, res) => {
+  try {
+    console.log("📝 Profile Update Request - User:", req.user._id);
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update text fields - only if provided
+    if (req.body.name && req.body.name.trim()) {
+      user.name = req.body.name.trim();
+    }
+    
+    if (req.body.email && req.body.email.trim()) {
+      user.email = req.body.email.trim();
+    }
+    
+    if (req.body.phone && req.body.phone.trim()) {
+      user.phone = req.body.phone.trim();
+    }
+    
+    // Avatar upload - File from Cloudinary via multer
+    if (req.file) {
+      user.avatar = req.file.path;
+    }
+
+    if (req.body.password && req.body.password.trim()) {
+      user.password = req.body.password.trim();
+    }
+
+    const updatedUser = await user.save();
+
+    // Extract token from Authorization header
+    const token = req.headers.authorization?.split(' ')[1] || '';
+
+    res.status(200).json({
+      success: true,
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phone: updatedUser.phone,
+      avatar: updatedUser.avatar,
+      addresses: updatedUser.addresses,
+      isAdmin: updatedUser.isAdmin,
+      isVerified: updatedUser.isVerified,
+      token,
+      message: 'Profile updated successfully'
+    });
+  } catch (error) {
+    console.error("❌ Profile Update Error:", error.message);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to update profile: ' + error.message 
+    });
+  }
+});
 
 // --- ADD ADDRESS (POST) ---
 router.post('/address', protect, async (req, res) => {
@@ -220,7 +285,7 @@ router.post('/address', protect, async (req, res) => {
     }
 });
 
-// --- UPDATE ADDRESS (PUT) - ✅ NEW ROUTE ---
+// --- UPDATE ADDRESS (PUT) ---
 router.put('/address/:addressId', protect, async (req, res) => {
     const { street, city, state, zip, country, phone, isPrimary } = req.body;
     const user = await User.findById(req.user._id);
@@ -238,7 +303,7 @@ router.put('/address/:addressId', protect, async (req, res) => {
 
             // Handle Primary Toggle
             if (isPrimary) {
-                user.addresses.forEach(a => a.isPrimary = false); // Unset others
+                user.addresses.forEach(a => a.isPrimary = false);
                 address.isPrimary = true;
             }
 
@@ -269,11 +334,9 @@ router.delete('/address/:addressId', protect, async (req, res) => {
 // ==========================================
 
 // 1. Initiate Google Login
-// Route: GET /api/auth/google
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 // 2. Google Callback (After user logs in at Google)
-// Route: GET /api/auth/google/callback
 router.get(
   '/google/callback',
   passport.authenticate('google', { failureRedirect: '/login' }),
@@ -284,8 +347,9 @@ router.get(
     });
 
     // 4. Redirect to Frontend with Token
-    // Make sure this matches your React App's port (usually 5173 or 3000)
-    res.redirect(`http://localhost:5173/login-success?token=${token}&user=${encodeURIComponent(JSON.stringify(req.user))}`);
+    const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+    
+    res.redirect(`${CLIENT_URL}/login-success?token=${token}&user=${encodeURIComponent(JSON.stringify(req.user))}`);
   }
 );
 

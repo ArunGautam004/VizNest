@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-// ✅ IMPORT DOWNLOAD ICON
 import { Edit2, MapPin, Phone, Trash2, X, Camera, ChevronDown, ChevronUp, Package, ExternalLink, Calendar, Loader, Download } from 'lucide-react';
 
 const Profile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // API URL
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   // Data State
   const [userData, setUserData] = useState(null);
@@ -39,7 +41,7 @@ const Profile = () => {
             return;
         }
 
-        const userRes = await fetch('http://localhost:5000/api/auth/profile', {
+        const userRes = await fetch(`${API_URL}/api/auth/profile`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -53,8 +55,9 @@ const Profile = () => {
             email: userData.email || '',
             avatar: null 
         });
+        setPreviewAvatar(null);
 
-        const ordersRes = await fetch('http://localhost:5000/api/orders/myorders', {
+        const ordersRes = await fetch(`${API_URL}/api/orders/myorders`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -91,7 +94,7 @@ const Profile = () => {
   const handleDownloadInvoice = async (orderId) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/orders/${orderId}/invoice`, {
+      const res = await fetch(`${API_URL}/api/orders/${orderId}/invoice`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -117,29 +120,47 @@ const Profile = () => {
     }
   };
 
-  // --- HANDLERS ---
+  // --- PROFILE UPDATE HANDLER (WITH AVATAR) ---
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
+    
     const formData = new FormData();
     formData.append('name', profileForm.name);
     formData.append('phone', profileForm.phone);
-    if(profileForm.avatar) formData.append('avatar', profileForm.avatar);
+    formData.append('email', profileForm.email);
+    
+    // Avatar upload - only if file is selected
+    if(profileForm.avatar) {
+      formData.append('avatar', profileForm.avatar);
+    }
 
     try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/auth/profile', {
+        const res = await fetch(`${API_URL}/api/auth/profile`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData
         });
-        if(res.ok) {
-            await fetchProfileData();
+
+        const data = await res.json();
+
+        if (res.ok) {
+            setUserData(data); 
             setIsEditingProfile(false);
-            alert("Profile Updated!");
+            setPreviewAvatar(null);
+            setProfileForm({ ...profileForm, avatar: null });
+            alert("Profile Updated Successfully!");
+            await fetchProfileData();
+        } else {
+            throw new Error(data.message || "Update failed");
         }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+        console.error(err);
+        alert("Failed to update profile: " + err.message);
+    }
   };
 
+  // Avatar change handler
   const handleAvatarChange = (e) => {
       const file = e.target.files[0];
       if(file) {
@@ -148,6 +169,7 @@ const Profile = () => {
       }
   };
 
+  // Prepare edit address
   const handleStartEditAddress = (addr) => {
       setAddressForm({
           street: addr.street,
@@ -165,21 +187,23 @@ const Profile = () => {
       }, 100);
   };
 
+  // Cancel edit address
   const handleCancelEditAddress = () => {
       setAddressForm({ street: '', city: '', state: '', zip: '', country: '', phone: '', isPrimary: false });
       setEditingAddressId(null);
       setShowAddressForm(false);
   };
 
+  // Submit address (add or update)
   const handleSaveAddress = async (e) => {
       e.preventDefault();
       try {
         const token = localStorage.getItem('token');
-        let url = 'http://localhost:5000/api/auth/address';
+        let url = `${API_URL}/api/auth/address`;
         let method = 'POST';
 
         if (editingAddressId) {
-            url = `http://localhost:5000/api/auth/address/${editingAddressId}`;
+            url = `${API_URL}/api/auth/address/${editingAddressId}`;
             method = 'PUT';
         }
 
@@ -200,7 +224,7 @@ const Profile = () => {
       if(!window.confirm("Delete this address?")) return;
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch(`http://localhost:5000/api/auth/address/${addressId}`, {
+        const res = await fetch(`${API_URL}/api/auth/address/${addressId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -362,7 +386,6 @@ const Profile = () => {
                                               {order.status === 'Processing' && <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5 animate-pulse"></span>}
                                               {order.status}
                                           </span>
-                                          {/* ✅ INVOICE BUTTON */}
                                           {order.status === 'Delivered' && (
                                               <button 
                                                   onClick={() => handleDownloadInvoice(order._id)}
@@ -431,7 +454,7 @@ const Profile = () => {
                             <label className="cursor-pointer relative group">
                                 <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-lg flex items-center justify-center bg-gray-50 ring-4 ring-indigo-50">
                                     {previewAvatar || userData.avatar ? (
-                                        <img src={previewAvatar || userData.avatar} className="w-full h-full object-cover" />
+                                        <img src={previewAvatar || userData.avatar} alt="Avatar Preview" className="w-full h-full object-cover" />
                                     ) : (
                                         <Camera className="text-gray-300" size={32}/>
                                     )}
